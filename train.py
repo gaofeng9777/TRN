@@ -2,20 +2,28 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from model import ConvNet  # 替换为你的模型文件
+from model import ConvNet, HyperspectralCNN  # 替换为你的模型文件
 from data_generator import HyperspectralDataset
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+print(torch.__version__)  # 查看PyTorch版本
+print(torch.cuda.is_available())  # 检查CUDA是否可用
+print(torch.cuda.get_device_name(0))  # 获取GPU名称
+
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)  # 为当前 GPU 设定种子
+
 # 设置设备
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 超参数
-batch_size = 8
-epochs = 20
+batch_size = 16
+epochs = 50
 learning_rate = 0.001
+num_class = 8
 
 # 加载数据集
 root_dir = "Hyper"  # 替换为你的数据集路径
@@ -26,9 +34,15 @@ train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size,
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
-
+# label_counts = Counter()
+# for images, labels in train_loader:
+#     label_counts.update(labels.cpu().numpy())  # 统计当前 batch 的标签数量
+#
+# # 打印每种标签的出现次数
+# for label in range(8):  # 假设标签是 0-7
+#     print(f"Label {label}: {label_counts[label]} occurrences")
 # 初始化模型
-model = ConvNet().to(device)
+model = HyperspectralCNN(num_classes=num_class).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -41,7 +55,7 @@ def train():
         all_preds, all_labels = [], []
 
         progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}")
-        for images, labels in train_loader:
+        for images, labels in progress_bar:
             images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = model(images)
@@ -91,4 +105,4 @@ def validate():
 
 if __name__ == "__main__":
     train()
-    #validate()
+    validate()
