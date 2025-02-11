@@ -34,14 +34,8 @@ train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size,
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
-# label_counts = Counter()
-# for images, labels in train_loader:
-#     label_counts.update(labels.cpu().numpy())  # 统计当前 batch 的标签数量
-#
-# # 打印每种标签的出现次数
-# for label in range(8):  # 假设标签是 0-7
-#     print(f"Label {label}: {label_counts[label]} occurrences")
-# 初始化模型
+
+model_save_path = "model/best_model.pth"
 model = HyperspectralCNN(num_classes=num_class).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -49,6 +43,7 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 # 训练函数
 def train():
+    best_acc = 0.0
     model.train()
     for epoch in range(epochs):
         running_loss = 0.0
@@ -71,6 +66,10 @@ def train():
             progress_bar.set_postfix(loss=running_loss / len(train_loader))
 
         acc = accuracy_score(all_labels, all_preds)
+        if acc > best_acc:
+            best_acc = acc
+            torch.save(model.state_dict(), model_save_path)
+            print(f"Best model saved with accuracy: {best_acc:.4f}")
         print(f"Epoch [{epoch + 1}/{epochs}], Loss: {running_loss / len(train_loader):.4f}, Accuracy: {acc:.4f}")
 
 
